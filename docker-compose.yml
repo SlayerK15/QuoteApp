@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    environment:
+      - MONGO_INITDB_DATABASE=quote-api
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - quote-network
+    ports:
+      - "27017:27017"
+    command: mongod --bind_ip_all
+
+  backend:
+    build:
+      context: ./quote-api
+      dockerfile: Dockerfile
+    container_name: quote-api
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - MONGO_URI=mongodb://mongodb:27017/quote-api
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+    networks:
+      - quote-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: quote-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - quote-network
+
+networks:
+  quote-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
